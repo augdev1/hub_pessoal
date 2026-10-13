@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   SiGithub,
@@ -49,7 +49,7 @@ function App() {
     },
     {
       label: 'Counter-Strike',
-      handle: 'Allstar • extr3myz',
+      handle: 'Allstar â€¢ extr3myz',
       url: 'https://allstar.gg/u/extr3myz',
       icon: <SiCounterstrike className="w-5 h-5 text-zinc-950" />,
       iconBg: 'bg-gradient-to-br from-[#F5A623] to-[#C97B00] shadow-sm',
@@ -128,7 +128,7 @@ function App() {
         initial={{ opacity: 0 }}
         animate={{ opacity: isLoaded ? 1 : 0 }}
         transition={{ duration: 1, ease: 'easeOut' }}
-        className="fixed inset-0 z-10 flex flex-col items-center justify-center px-3.5 sm:px-6 lg:px-8 py-2 sm:py-6 overflow-hidden select-none"
+        className="fixed inset-0 z-10 flex flex-col items-center justify-start sm:justify-center px-3.5 sm:px-6 lg:px-8 py-2 sm:py-6 overflow-y-auto select-none"
       >
         <motion.div
           variants={containerVariants}
@@ -217,17 +217,17 @@ function App() {
                 className="flex flex-wrap items-center justify-center gap-1.5 text-[11px] sm:text-xs text-zinc-400"
               >
                 <span className="px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-sm border border-white/10 text-zinc-300 font-medium">
-                  Música
+                  MÃºsica
                 </span>
-                <span className="text-zinc-600">•</span>
+                <span className="text-zinc-600">â€¢</span>
                 <span className="px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-sm border border-white/10 text-zinc-300 font-medium">
                   Tecnologia
                 </span>
-                <span className="text-zinc-600">•</span>
+                <span className="text-zinc-600">â€¢</span>
                 <span className="px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-sm border border-white/10 text-zinc-300 font-medium">
                   IA
                 </span>
-                <span className="text-zinc-600">•</span>
+                <span className="text-zinc-600">â€¢</span>
                 <span className="px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-sm border border-white/10 text-zinc-300 font-medium">
                   CS
                 </span>
@@ -278,7 +278,7 @@ function App() {
               variants={itemVariants}
               className="mt-4 pt-3 border-t border-white/[0.06] text-center text-[11px] sm:text-xs text-zinc-500 font-mono"
             >
-              <span>© 2026 augrocky</span>
+              <span>Â© 2026 augrocky</span>
             </motion.div>
           </motion.div>
 
@@ -294,3 +294,4 @@ function App() {
 }
 
 export default App;
+

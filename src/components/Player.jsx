@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef, useEffect } from 'react';
+﻿import React, { useState, useRef, useEffect, useCallback } from 'react';
 
 const TRACKS = [
   {
@@ -35,9 +35,15 @@ const Player = () => {
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  const [isBuffering, setIsBuffering] = useState(false);
   const [volume, setVolume] = useState(0.3);
   const audioRef = useRef(null);
-  const isFirstRender = useRef(true);
+  const isPlayingRef = useRef(false);
+
+  // Keep ref synchronized with state for callbacks
+  useEffect(() => {
+    isPlayingRef.current = isPlaying;
+  }, [isPlaying]);
 
   // Volume & Mute control
   useEffect(() => {
@@ -47,42 +53,58 @@ const Player = () => {
     }
   }, [volume, isMuted]);
 
-  // Handle Track Changes
-  useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
-
+  const playTrack = useCallback((trackIndex) => {
     const audio = audioRef.current;
-    if (audio) {
-      audio.load();
-      if (isPlaying) {
-        audio.play().catch(error => {
-          console.log('Audio playback failed:', error);
-        });
+    if (!audio) return;
+
+    setCurrentTrackIndex(trackIndex);
+    audio.src = encodeURI(TRACKS[trackIndex].src);
+    audio.load();
+
+    if (isPlayingRef.current) {
+      setIsBuffering(true);
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            setIsBuffering(false);
+          })
+          .catch(error => {
+            console.log('Mobile audio playback postponed or blocked:', error);
+            setIsBuffering(false);
+          });
       }
     }
-  }, [currentTrackIndex]);
+  }, []);
 
   const togglePlay = () => {
     const audio = audioRef.current;
-    if (audio) {
-      if (isPlaying) {
-        audio.pause();
-        setIsPlaying(false);
-      } else {
-        audio.play().then(() => {
-          setIsPlaying(true);
-        }).catch(error => {
-          console.log('Audio playback failed:', error);
-        });
+    if (!audio) return;
+
+    if (isPlaying) {
+      audio.pause();
+      setIsPlaying(false);
+      setIsBuffering(false);
+    } else {
+      setIsBuffering(true);
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            setIsPlaying(true);
+            setIsBuffering(false);
+          })
+          .catch(error => {
+            console.log('Audio playback failed:', error);
+            setIsBuffering(false);
+          });
       }
     }
   };
 
   const handleNext = () => {
-    setCurrentTrackIndex(prev => (prev + 1) % TRACKS.length);
+    const nextIndex = (currentTrackIndex + 1) % TRACKS.length;
+    playTrack(nextIndex);
   };
 
   const handlePrev = () => {
@@ -90,7 +112,8 @@ const Player = () => {
     if (audio && audio.currentTime > 3) {
       audio.currentTime = 0;
     } else {
-      setCurrentTrackIndex(prev => (prev - 1 + TRACKS.length) % TRACKS.length);
+      const prevIndex = (currentTrackIndex - 1 + TRACKS.length) % TRACKS.length;
+      playTrack(prevIndex);
     }
   };
 
@@ -106,7 +129,10 @@ const Player = () => {
         ref={audioRef}
         src={encodeURI(currentTrack.src)}
         onEnded={handleNext}
-        preload="auto"
+        onWaiting={() => setIsBuffering(true)}
+        onPlaying={() => setIsBuffering(false)}
+        onCanPlay={() => setIsBuffering(false)}
+        preload="metadata"
       />
 
       {/* Volume & Track Control Panel */}
@@ -115,8 +141,16 @@ const Player = () => {
           {/* Now Playing Header */}
           <div className="flex items-center justify-between w-full text-[10px] sm:text-xs text-zinc-400 font-mono tracking-wider uppercase select-none">
             <div className="flex items-center gap-1.5 min-w-0 overflow-hidden">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse flex-shrink-0"></span>
-              <span className="truncate">Tocando agora: {currentTrack.title}</span>
+              <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+                isBuffering
+                  ? 'bg-amber-400 animate-ping'
+                  : isPlaying
+                  ? 'bg-emerald-400 animate-pulse'
+                  : 'bg-zinc-500'
+              }`}></span>
+              <span className="truncate">
+                {isBuffering ? 'Carregando...' : `Tocando agora: ${currentTrack.title}`}
+              </span>
             </div>
             <span className="text-[9px] sm:text-[10px] text-zinc-500 font-mono flex-shrink-0 ml-2">
               {currentTrackIndex + 1}/{TRACKS.length}
@@ -130,7 +164,7 @@ const Player = () => {
               {/* Previous Button (Voltar) */}
               <button
                 onClick={handlePrev}
-                className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 flex items-center justify-center transition-all duration-200 text-white cursor-pointer"
+                className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 flex items-center justify-center transition-all duration-200 text-white cursor-pointer touch-manipulation"
                 title="Faixa anterior"
               >
                 <svg className="w-3 sm:w-3.5 h-3 sm:h-3.5" fill="currentColor" viewBox="0 0 24 24">
@@ -141,10 +175,15 @@ const Player = () => {
               {/* Play/Pause Button */}
               <button
                 onClick={togglePlay}
-                className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 flex items-center justify-center transition-all duration-200 text-white cursor-pointer"
+                className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 flex items-center justify-center transition-all duration-200 text-white cursor-pointer touch-manipulation relative"
                 title={isPlaying ? "Pausar" : "Tocar"}
               >
-                {isPlaying ? (
+                {isBuffering ? (
+                  <svg className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-white animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                ) : isPlaying ? (
                   <svg className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-white" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
                   </svg>
@@ -158,7 +197,7 @@ const Player = () => {
               {/* Next Button (Avançar / Skip) */}
               <button
                 onClick={handleNext}
-                className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 flex items-center justify-center transition-all duration-200 text-white cursor-pointer"
+                className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 flex items-center justify-center transition-all duration-200 text-white cursor-pointer touch-manipulation"
                 title="Próxima faixa"
               >
                 <svg className="w-3 sm:w-3.5 h-3 sm:h-3.5" fill="currentColor" viewBox="0 0 24 24">
@@ -169,7 +208,7 @@ const Player = () => {
               {/* Mute Button */}
               <button
                 onClick={toggleMute}
-                className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 flex items-center justify-center transition-all duration-200 text-white cursor-pointer"
+                className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 flex items-center justify-center transition-all duration-200 text-white cursor-pointer touch-manipulation"
                 title={isMuted ? "Ativar som" : "Mutar"}
               >
                 {isMuted ? (
@@ -194,7 +233,7 @@ const Player = () => {
                 step="0.01"
                 value={volume}
                 onChange={(e) => setVolume(parseFloat(e.target.value))}
-                className="w-full flex-1 h-1.5 bg-zinc-700/60 rounded-full appearance-none cursor-pointer"
+                className="w-full flex-1 h-1.5 bg-zinc-700/60 rounded-full appearance-none cursor-pointer touch-manipulation"
                 style={{
                   background: `linear-gradient(to right, #ffffff 0%, #ffffff ${volume * 100}%, #3f3f46 ${volume * 100}%, #3f3f46 100%)`
                 }}

@@ -1,12 +1,22 @@
-import React, { useEffect, useRef, useState } from 'react';
+﻿import React, { useEffect, useRef, useState } from 'react';
 
 const Cursor = () => {
+  const [isTouchDevice, setIsTouchDevice] = useState(true);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isHovering, setIsHovering] = useState(false);
   const cursorRef = useRef(null);
   const rafRef = useRef(null);
 
   useEffect(() => {
+    // Se for dispositivo móvel / touch, não ativa o cursor customizado nem adiciona listeners
+    const isTouch = window.matchMedia('(pointer: coarse)').matches || ('ontouchstart' in window) || window.innerWidth < 768;
+    if (isTouch) {
+      setIsTouchDevice(true);
+      return;
+    }
+
+    setIsTouchDevice(false);
+
     const handleMouseMove = (e) => {
       if (rafRef.current) {
         cancelAnimationFrame(rafRef.current);
@@ -49,10 +59,14 @@ const Cursor = () => {
   }, []);
 
   useEffect(() => {
-    if (cursorRef.current) {
+    if (cursorRef.current && !isTouchDevice) {
       cursorRef.current.style.transform = `translate(-50%, -50%) scale(${isHovering ? 1.5 : 1})`;
     }
-  }, [isHovering]);
+  }, [isHovering, isTouchDevice]);
+
+  if (isTouchDevice) {
+    return null;
+  }
 
   return (
     <>

@@ -1,33 +1,33 @@
-﻿import React, { useState, useRef, useEffect, useCallback } from 'react';
+﻿import React, { useState, useRef, useEffect } from 'react';
 
 const TRACKS = [
   {
     title: '2AM IN MANAUS PROD BY AUG',
-    src: '/audio/2AM IN MANAUS PROD BY AUG.wav'
+    src: '/audio/2AM IN MANAUS PROD BY AUG.mp3'
   },
   {
     title: 'CALL THE PLUG PROD BY AUG',
-    src: '/audio/CALL THE PLUG PROD BY AUG.wav'
+    src: '/audio/CALL THE PLUG PROD BY AUG.mp3'
   },
   {
     title: 'CAOS PROD BY AUG',
-    src: '/audio/CAOS PROD BY AUG.wav'
+    src: '/audio/CAOS PROD BY AUG.mp3'
   },
   {
     title: 'IM ON ONE PROD BY AUG',
-    src: '/audio/IM ON ONE PROD BY AUG.wav'
+    src: '/audio/IM ON ONE PROD BY AUG.mp3'
   },
   {
     title: 'MISSED CALLS PROD BY AUG',
-    src: '/audio/MISSED CALLS PROD BY AUG.wav'
+    src: '/audio/MISSED CALLS PROD BY AUG.mp3'
   },
   {
     title: 'REAL1TY PROD BY AUG',
-    src: '/audio/REAL1TY PROD BY AUG.wav'
+    src: '/audio/REAL1TY PROD BY AUG.mp3'
   },
   {
     title: 'MIDNIGHT PROD BY AUG',
-    src: '/audio/ambient-music.wav'
+    src: '/audio/ambient-music.mp3'
   }
 ];
 
@@ -39,8 +39,9 @@ const Player = () => {
   const [volume, setVolume] = useState(0.3);
   const audioRef = useRef(null);
   const isPlayingRef = useRef(false);
+  const isFirstRender = useRef(true);
 
-  // Keep ref synchronized with state for callbacks
+  // Synchronize isPlaying with ref for stable callbacks
   useEffect(() => {
     isPlayingRef.current = isPlaying;
   }, [isPlaying]);
@@ -53,13 +54,18 @@ const Player = () => {
     }
   }, [volume, isMuted]);
 
-  const playTrack = useCallback((trackIndex) => {
+  // Track switching & playback management
+  useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    setCurrentTrackIndex(trackIndex);
-    audio.src = encodeURI(TRACKS[trackIndex].src);
+    audio.src = encodeURI(TRACKS[currentTrackIndex].src);
     audio.load();
+
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
 
     if (isPlayingRef.current) {
       setIsBuffering(true);
@@ -70,12 +76,12 @@ const Player = () => {
             setIsBuffering(false);
           })
           .catch(error => {
-            console.log('Mobile audio playback postponed or blocked:', error);
+            console.log('Audio playback postponed or interrupted:', error);
             setIsBuffering(false);
           });
       }
     }
-  }, []);
+  }, [currentTrackIndex]);
 
   const togglePlay = () => {
     const audio = audioRef.current;
@@ -103,8 +109,7 @@ const Player = () => {
   };
 
   const handleNext = () => {
-    const nextIndex = (currentTrackIndex + 1) % TRACKS.length;
-    playTrack(nextIndex);
+    setCurrentTrackIndex(prev => (prev + 1) % TRACKS.length);
   };
 
   const handlePrev = () => {
@@ -112,8 +117,7 @@ const Player = () => {
     if (audio && audio.currentTime > 3) {
       audio.currentTime = 0;
     } else {
-      const prevIndex = (currentTrackIndex - 1 + TRACKS.length) % TRACKS.length;
-      playTrack(prevIndex);
+      setCurrentTrackIndex(prev => (prev - 1 + TRACKS.length) % TRACKS.length);
     }
   };
 
@@ -127,12 +131,11 @@ const Player = () => {
     <>
       <audio
         ref={audioRef}
-        src={encodeURI(currentTrack.src)}
         onEnded={handleNext}
         onWaiting={() => setIsBuffering(true)}
         onPlaying={() => setIsBuffering(false)}
         onCanPlay={() => setIsBuffering(false)}
-        preload="metadata"
+        preload="auto"
       />
 
       {/* Volume & Track Control Panel */}

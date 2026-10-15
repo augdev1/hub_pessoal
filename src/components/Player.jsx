@@ -144,13 +144,15 @@ const Player = () => {
           {/* Now Playing Header */}
           <div className="flex items-center justify-between w-full text-[10px] sm:text-xs text-zinc-400 font-mono tracking-wider uppercase select-none">
             <div className="flex items-center gap-1.5 min-w-0 overflow-hidden">
-              <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-                isBuffering
-                  ? 'bg-amber-400 animate-ping'
-                  : isPlaying
-                  ? 'bg-emerald-400 animate-pulse'
-                  : 'bg-zinc-500'
-              }`}></span>
+              <span className="relative flex items-center justify-center w-2 h-2 flex-shrink-0">
+                <span className={`w-1 h-1 rounded-full ${
+                  isBuffering
+                    ? 'bg-amber-400 animate-pulse'
+                    : isPlaying
+                    ? 'bg-emerald-400 animate-pulse shadow-[0_0_5px_rgba(52,211,153,0.8)]'
+                    : 'bg-zinc-600'
+                }`}></span>
+              </span>
               <span className="truncate">
                 {isBuffering ? 'Carregando...' : `Tocando agora: ${currentTrack.title}`}
               </span>
@@ -253,3 +255,4 @@ const Player = () => {
 };
 
 export default Player;
+
